@@ -46,6 +46,89 @@ uv run python scripts/stage1_pretrained_eval.py --split val --sample-clip-id spk
 
 Outputs are written under `outputs/stage1_eval/pretrained/`.
 
+The script now resolves repo-local defaults automatically, so it can be run from this checkout without editing hardcoded paths. For a smoke test:
+
+```bash
+uv run python scripts/stage1_pretrained_eval.py --split val --max-samples 1
+```
+
+## Stage 1 Retraining Track
+
+The repo-native CNN/Transformer/CTC Stage 1 model now has a scriptable train/eval path:
+
+```bash
+uv run python scripts/stage1_train_ctc.py --epochs 20 --augment
+```
+
+Useful smoke test:
+
+```bash
+uv run python scripts/stage1_train_ctc.py \
+  --epochs 1 \
+  --max-train-samples 8 \
+  --max-val-samples 4 \
+  --max-steps-per-epoch 1 \
+  --batch-size 2 \
+  --output-dir outputs/stage1_eval/retrain_smoke
+```
+
+Outputs are written under `outputs/stage1_eval/retrain/` by default:
+
+- `stage1_ctc_best.pt`
+- `val_predictions_stage1_retrain.csv`
+- `train_history_stage1_retrain.csv`
+- `val_summary_stage1_retrain.json`
+
+Evaluate a saved CTC checkpoint without retraining:
+
+```bash
+uv run python scripts/stage1_train_ctc.py \
+  --eval-only \
+  --checkpoint outputs/stage1_eval/retrain/stage1_ctc_best.pt
+```
+
+## Stage 2 Evaluation
+
+Full Stage 2 evaluation, full-test metrics export, and guidance ablation now live in a reusable script instead of only inside the notebook:
+
+```bash
+uv run python scripts/stage2_evaluate.py
+```
+
+Useful smoke-test flags:
+
+```bash
+uv run python scripts/stage2_evaluate.py --demo-count 1 --full-eval-limit 1 --ablation-count 1 --use-fast-inference
+```
+
+The script writes:
+
+- `outputs/stage2_finetune/test_metrics.csv`
+- `outputs/stage2_finetune/test_full_metrics.csv`
+- `outputs/stage2_finetune/ablation_guidance.csv`
+- `outputs/stage2_finetune/ablation_conf_weighted.csv` when Stage 1 passes the credibility gate
+- `outputs/stage2_finetune/final_report.json`
+- `outputs/stage2_finetune/evaluation_summary.csv`
+
+## Third-party Dependencies
+
+The notebook and scripts depend on LipVoicer, which must be cloned into `third_party/`:
+
+```bash
+git clone https://github.com/yochaiye/LipVoicer Pipeline/third_party/LipVoicer
+```
+
+This directory is not committed to the repo. The notebook imports from `Pipeline.third_party.LipVoicer.*` and requires pretrained checkpoints.
+
+Download all pretrained checkpoints (MelGen LRS2/LRS3, HiFi-GAN, ASR, lip-reading, tokenizer, LM):
+
+```bash
+cd Pipeline/third_party/LipVoicer
+python download_checkpoints.py
+```
+
+This downloads ~2GB into subdirs: `exp/`, `hifi_gan/`, `ASR/`, `mouthroi_processing/`. Must be run from inside `third_party/LipVoicer/` so relative paths resolve correctly.
+
 ## Docs
 
 - Architecture and work split: [docs/architecture.md](docs/architecture.md)
